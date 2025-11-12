@@ -1,51 +1,61 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>แบบฟอร์มลงชื่อเข้าร่วม</title>
+  <meta charset="UTF-8">
+  <title>ร่วมลุ้นรางวัล</title>
   <style>
-    body{font-family:system-ui, -apple-system; background:#f8fafc; display:flex; justify-content:center; align-items:center; height:100vh;}
-    .card{background:white; padding:20px; border-radius:12px; width:100%; max-width:400px; box-shadow:0 8px 20px rgba(0,0,0,0.1);}
-    h1{margin-top:0;}
-    input{width:100%; padding:10px; border-radius:8px; border:1px solid #ccc; font-size:16px;}
-    button{margin-top:10px; width:100%; padding:10px; border-radius:8px; border:0; background:#0ea5e9; color:white; font-weight:600; cursor:pointer;}
-    #status{margin-top:8px; font-size:14px;}
+    body {
+      background: linear-gradient(135deg, #2563eb, #1e3a8a);
+      color: white;
+      font-family: "Prompt", sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      text-align: center;
+    }
+    input {
+      width: 80%;
+      max-width: 300px;
+      padding: 12px;
+      font-size: 1rem;
+      border-radius: 10px;
+      border: none;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    button {
+      background: #22c55e;
+      color: white;
+      border: none;
+      padding: 12px 30px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 1.1rem;
+    }
+    button:hover { background: #16a34a; }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>ลงชื่อเข้าร่วม</h1>
-    <input id="name" type="text" placeholder="ชื่อของคุณ" required>
-    <button id="submitBtn">ส่งข้อมูล</button>
-    <div id="status"></div>
-  </div>
-<script>
-const NAMES_KEY = 'raffle_names';
-function getNames(){
-  return JSON.parse(localStorage.getItem(NAMES_KEY) || "[]");
-}
-function saveNames(arr){
-  localStorage.setItem(NAMES_KEY, JSON.stringify(arr));
-}
-const input = document.getElementById('name');
-const status = document.getElementById('status');
-document.getElementById('submitBtn').onclick = ()=>{
-  const name = input.value.trim();
-  if(!name){
-    status.textContent = "กรุณากรอกชื่อก่อนส่ง";
-    return;
-  }
-  let names = getNames();
-  if(names.includes(name)){
-    status.textContent = "ชื่อนี้ถูกลงทะเบียนแล้ว";
-    return;
-  }
-  names.push(name);
-  saveNames(names);
-  status.textContent = "ลงทะเบียนเรียบร้อย!";
-  input.value = "";
-};
-</script>
+  <h1>🎉 ร่วมลุ้นรางวัล 🎉</h1>
+  <p>กรอกชื่อของคุณเพื่อลุ้นรางวัล</p>
+  <input type="text" id="nameInput" placeholder="ใส่ชื่อของคุณ">
+  <button id="sendBtn">ส่งชื่อ</button>
+
+  <script>
+    const scriptURL = "https://script.google.com/macros/s/AKfycbwnOwUGXJHANHxX8qbNWaDPeUxHTAz2M3JHED-fyaJps9vStSBJB7VzCnn-4KO_ascJVw/exec";
+
+    document.getElementById("sendBtn").onclick = async () => {
+      const name = document.getElementById("nameInput").value.trim();
+      if (!name) return alert("กรุณากรอกชื่อก่อนส่ง!");
+      await fetch(scriptURL, {
+        method: "POST",
+        body: new URLSearchParams({ action: "name", name }),
+      });
+      alert("ส่งชื่อสำเร็จแล้ว ✅");
+      document.getElementById("nameInput").value = "";
+    };
+  </script>
 </body>
 </html>
