@@ -1,61 +1,37 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8">
-  <title>ร่วมลุ้นรางวัล</title>
-  <style>
-    body {
-      background: linear-gradient(135deg, #2563eb, #1e3a8a);
-      color: white;
-      font-family: "Prompt", sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      text-align: center;
-    }
-    input {
-      width: 80%;
-      max-width: 300px;
-      padding: 12px;
-      font-size: 1rem;
-      border-radius: 10px;
-      border: none;
-      margin-bottom: 10px;
-      text-align: center;
-    }
-    button {
-      background: #22c55e;
-      color: white;
-      border: none;
-      padding: 12px 30px;
-      border-radius: 12px;
-      cursor: pointer;
-      font-size: 1.1rem;
-    }
-    button:hover { background: #16a34a; }
-  </style>
+<meta charset="UTF-8">
+<title>ร่วมลุ้นรางวัล</title>
+<style>
+body { display:flex;flex-direction:column;justify-content:center;align-items:center;height:100vh;margin:0;background:linear-gradient(135deg,#2563eb,#1e3a8a);color:#fff;font-family:Prompt,sans-serif;text-align:center;}
+input {width:80%;max-width:300px;padding:12px;margin:10px 0;border-radius:10px;border:none;text-align:center;font-size:1rem;}
+button {background:#22c55e;color:white;border:none;padding:12px 30px;border-radius:12px;font-size:1.1rem;cursor:pointer;}
+button:hover {background:#16a34a;}
+</style>
 </head>
 <body>
-  <h1>🎉 ร่วมลุ้นรางวัล 🎉</h1>
-  <p>กรอกชื่อของคุณเพื่อลุ้นรางวัล</p>
-  <input type="text" id="nameInput" placeholder="ใส่ชื่อของคุณ">
-  <button id="sendBtn">ส่งชื่อ</button>
+<h1>🎉 ร่วมลุ้นรางวัล 🎉</h1>
+<p>กรอกชื่อของคุณเพื่อลุ้นรางวัล</p>
+<input type="text" id="nameInput" placeholder="ใส่ชื่อของคุณ">
+<br>
+<button id="sendBtn">ส่งชื่อ</button>
 
-  <script>
-    const scriptURL = "https://script.google.com/macros/s/AKfycbwnOwUGXJHANHxX8qbNWaDPeUxHTAz2M3JHED-fyaJps9vStSBJB7VzCnn-4KO_ascJVw/exec";
+<script>
+const scriptURL = "https://script.google.com/macros/s/AKfycbxXEQATVHDyf6UMbxxZ4QhKNxE8enYrhOaZpUHrNBObG3YCpb1vZXCNkfkSj4pmW9QQQQ/exec";
 
-    document.getElementById("sendBtn").onclick = async () => {
-      const name = document.getElementById("nameInput").value.trim();
-      if (!name) return alert("กรุณากรอกชื่อก่อนส่ง!");
-      await fetch(scriptURL, {
-        method: "POST",
-        body: new URLSearchParams({ action: "name", name }),
-      });
-      alert("ส่งชื่อสำเร็จแล้ว ✅");
-      document.getElementById("nameInput").value = "";
-    };
-  </script>
+document.getElementById("sendBtn").onclick = async () => {
+  const name = document.getElementById("nameInput").value.trim();
+  if(!name) return alert("กรุณากรอกชื่อก่อนส่ง!");
+  try{
+    await fetch(scriptURL,{
+      method:"POST",
+      body:new URLSearchParams({action:"name",name})
+    });
+    alert("ส่งชื่อสำเร็จ ✅");
+    document.getElementById("nameInput").value="";
+  }catch(err){console.error(err);alert("ส่งชื่อไม่สำเร็จ");}
+};
+</script>
 </body>
 </html>
