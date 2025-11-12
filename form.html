@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>แบบฟอร์มลงชื่อเข้าร่วม</title>
+  <style>
+    body{font-family:system-ui, -apple-system; background:#f8fafc; display:flex; justify-content:center; align-items:center; height:100vh;}
+    .card{background:white; padding:20px; border-radius:12px; width:100%; max-width:400px; box-shadow:0 8px 20px rgba(0,0,0,0.1);}
+    h1{margin-top:0;}
+    input{width:100%; padding:10px; border-radius:8px; border:1px solid #ccc; font-size:16px;}
+    button{margin-top:10px; width:100%; padding:10px; border-radius:8px; border:0; background:#0ea5e9; color:white; font-weight:600; cursor:pointer;}
+    #status{margin-top:8px; font-size:14px;}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>ลงชื่อเข้าร่วม</h1>
+    <input id="name" type="text" placeholder="ชื่อของคุณ" required>
+    <button id="submitBtn">ส่งข้อมูล</button>
+    <div id="status"></div>
+  </div>
+<script>
+const NAMES_KEY = 'raffle_names';
+function getNames(){
+  return JSON.parse(localStorage.getItem(NAMES_KEY) || "[]");
+}
+function saveNames(arr){
+  localStorage.setItem(NAMES_KEY, JSON.stringify(arr));
+}
+const input = document.getElementById('name');
+const status = document.getElementById('status');
+document.getElementById('submitBtn').onclick = ()=>{
+  const name = input.value.trim();
+  if(!name){
+    status.textContent = "กรุณากรอกชื่อก่อนส่ง";
+    return;
+  }
+  let names = getNames();
+  if(names.includes(name)){
+    status.textContent = "ชื่อนี้ถูกลงทะเบียนแล้ว";
+    return;
+  }
+  names.push(name);
+  saveNames(names);
+  status.textContent = "ลงทะเบียนเรียบร้อย!";
+  input.value = "";
+};
+</script>
+</body>
+</html>
