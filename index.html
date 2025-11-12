@@ -1,199 +1,254 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="UTF-8">
   <title>วงล้อสุ่มผู้โชคดี</title>
   <style>
-    body { font-family: system-ui, -apple-system, "Helvetica Neue"; background:#0f172a; color:#e6eef8; margin:0; display:flex; flex-direction:column; align-items:center; gap:18px; padding:18px; min-height:100vh; box-sizing:border-box;}
-    .card { background: rgba(255,255,255,0.05); border-radius:12px; padding:18px; width:100%; max-width:980px; box-shadow:0 10px 30px rgba(2,6,23,0.6); }
-    h1 { margin:0 0 8px 0; font-size:22px; color:#dbeafe; text-align:center; }
-    #qrcode-wrap { display:flex; flex-direction:column; align-items:center; gap:10px; padding:12px; background:rgba(255,255,255,0.02); border-radius:8px;}
-    #qrcode { width:180px; height:180px; }
-    #countdown { font-weight:700; font-size:18px; color:#fef3c7; }
-    #wheelcanvas { background: transparent; border-radius: 50%; }
-    #names-list, #winner-log { max-height:220px; overflow:auto; background:rgba(255,255,255,0.05); padding:8px; border-radius:8px; width:260px; }
-    button { padding:10px 14px; border-radius:10px; border:0; cursor:pointer; font-weight:600; }
-    .btn-primary { background:#0ea5e9; color:#002038; }
-    .btn-danger { background:#ef4444; color:#fff; }
-    .btn-muted { background:rgba(255,255,255,0.08); color:#cbd5e1; }
-    .small { font-size:13px; color:#cbd5e1; }
-    .flex-between { display:flex; justify-content:space-between; align-items:center; width:100%; }
+    body {
+      margin: 0;
+      background: radial-gradient(circle at center, #1e293b, #0f172a);
+      color: #fff;
+      font-family: "Prompt", sans-serif;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    #wheelCanvas {
+      width: 80vw;
+      height: 80vh;
+      max-height: 800px;
+      aspect-ratio: 16/9;
+    }
+    #controls {
+      position: absolute;
+      bottom: 5%;
+      display: flex;
+      gap: 1rem;
+    }
+    button {
+      background: #22c55e;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 14px 28px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    button:hover {
+      background: #16a34a;
+      transform: scale(1.05);
+    }
+    #popup, #winnerPopup {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .popup-content {
+      background: #1e293b;
+      padding: 30px;
+      border-radius: 16px;
+      text-align: center;
+      color: white;
+      width: 400px;
+    }
+    input {
+      width: 80%;
+      padding: 10px;
+      margin: 10px 0;
+      border: none;
+      border-radius: 8px;
+      text-align: center;
+      font-size: 1rem;
+    }
+    #winnerPopup {
+      font-size: 2rem;
+      color: #fff;
+      flex-direction: column;
+    }
+    #winnerPopup h2 {
+      color: #facc15;
+      font-size: 2.5rem;
+      margin-bottom: 20px;
+    }
   </style>
-  <!-- libs -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/Winwheel@2.7.0/Winwheel.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
 </head>
 <body>
-  <div class="card">
-    <h1>วงล้อสุ่มผู้โชคดี (Local Storage)</h1>
-    <div id="qrcode-wrap">
-      <div id="qrcode"></div>
-      <div class="small">ลิงก์: <code>form.html</code></div>
-      <div id="countdown">เวลาเหลือ: <span id="time">03:00</span></div>
-      <div style="display:flex; gap:8px; margin-top:6px;">
-        <button id="regenQr" class="btn-muted">สร้าง QR ใหม่</button>
-        <button id="hideQr" class="btn-muted">ซ่อน QR</button>
-      </div>
-    </div>
+  <canvas id="wheelCanvas"></canvas>
 
-    <div style="display:flex; gap:12px; margin-top:16px; align-items:flex-start; flex-wrap:wrap;">
-      <canvas id="wheelcanvas" width="420" height="420"></canvas>
-      <div style="width:280px; display:flex; flex-direction:column; gap:10px;">
-        <div class="flex-between">
-          <strong>รายชื่อผู้เข้าร่วม</strong>
-          <span class="small">(<span id="count">0</span> คน)</span>
-        </div>
-        <div id="names-list"></div>
-        <div style="display:flex; gap:8px;">
-          <button id="spinBtn" class="btn-primary" style="flex:1">หมุนวงล้อ</button>
-          <button id="resetBtn" class="btn-danger">Reset</button>
-        </div>
-        <div><strong>ผู้โชคดี</strong></div>
-        <div id="winner-log"></div>
-      </div>
+  <div id="controls">
+    <button id="spinButton">เริ่มหมุน</button>
+    <button id="resetButton">รีเซ็ตระบบ</button>
+  </div>
+
+  <div id="popup">
+    <div class="popup-content">
+      <h2>กรอกชื่อผู้เข้าร่วม</h2>
+      <input type="text" id="nameInput" placeholder="ใส่ชื่อที่นี่">
+      <br>
+      <button id="addName">เพิ่มชื่อ</button>
+      <p id="timer">เหลือเวลา: 3:00 นาที</p>
     </div>
   </div>
 
-<script>
-/* ======== QR Code + countdown ======== */
-const qrcodeEl = document.getElementById('qrcode');
-const timeEl = document.getElementById('time');
-let remaining = 180;
-let timer = null;
+  <div id="winnerPopup" style="display:none;">
+    <h2>🎉 ผู้โชคดีคือ 🎉</h2>
+    <p id="winnerName"></p>
+  </div>
 
-function generateQR() {
-  qrcodeEl.innerHTML = "";
-  new QRCode(qrcodeEl, {
-    text: window.location.origin + window.location.pathname.replace("index.html", "") + "form.html?t=" + Date.now(),
-    width: 180, height: 180
-  });
-  resetCountdown();
-}
-function resetCountdown() {
-  remaining = 180;
-  updateTime();
-  if (timer) clearInterval(timer);
-  timer = setInterval(() => {
-    remaining--;
-    updateTime();
-    if (remaining <= 0) {
-      clearInterval(timer);
-      qrcodeEl.innerHTML = "<div class='small'>QR หมดอายุ</div>";
+  <script>
+    const scriptURL = "https://script.google.com/macros/s/AKfycbwnOwUGXJHANHxX8qbNWaDPeUxHTAz2M3JHED-fyaJps9vStSBJB7VzCnn-4KO_ascJVw/exec";
+
+    const canvas = document.getElementById("wheelCanvas");
+    const ctx = canvas.getContext("2d");
+    const popup = document.getElementById("popup");
+    const nameInput = document.getElementById("nameInput");
+    const addNameBtn = document.getElementById("addName");
+    const spinButton = document.getElementById("spinButton");
+    const resetButton = document.getElementById("resetButton");
+    const winnerPopup = document.getElementById("winnerPopup");
+    const winnerNameEl = document.getElementById("winnerName");
+    const timerEl = document.getElementById("timer");
+
+    let names = [];
+    let winners = [];
+    let spinning = false;
+    let startAngle = 0;
+    let spinTimeout = null;
+
+    // จัดขนาด canvas ให้พอดีกับจอ
+    function resizeCanvas() {
+      canvas.width = window.innerWidth * 0.8;
+      canvas.height = (canvas.width * 9) / 16;
+      drawWheel();
     }
-  }, 1000);
-}
-function updateTime() {
-  const mm = String(Math.floor(remaining / 60)).padStart(2,'0');
-  const ss = String(remaining % 60).padStart(2,'0');
-  timeEl.textContent = `${mm}:${ss}`;
-}
-document.getElementById('regenQr').onclick = generateQR;
-document.getElementById('hideQr').onclick = function(){
-  const wrap = document.getElementById('qrcode-wrap');
-  wrap.style.display = wrap.style.display==='none'?'flex':'none';
-};
-generateQR();
+    window.addEventListener("resize", resizeCanvas);
 
-/* ======== Local Storage logic ======== */
-const NAMES_KEY = 'raffle_names';
-const WINNERS_KEY = 'raffle_winners';
-function getNames() {
-  return JSON.parse(localStorage.getItem(NAMES_KEY) || "[]");
-}
-function saveNames(arr) {
-  localStorage.setItem(NAMES_KEY, JSON.stringify(arr));
-}
-function getWinners() {
-  return JSON.parse(localStorage.getItem(WINNERS_KEY) || "[]");
-}
-function saveWinners(arr) {
-  localStorage.setItem(WINNERS_KEY, JSON.stringify(arr));
-}
+    function drawWheel() {
+      const outsideRadius = canvas.height / 2 - 10;
+      const textRadius = outsideRadius - 40;
+      const insideRadius = 0;
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const arc = (2 * Math.PI) / names.length;
 
-/* ======== Wheel ======== */
-let names = getNames();
-let winners = getWinners();
-const namesEl = document.getElementById('names-list');
-const winnersEl = document.getElementById('winner-log');
-const countEl = document.getElementById('count');
-let wheel;
-function rebuildWheel() {
-  const segs = names.length ? names.map(n => ({text:n})) : [{text:"ไม่มีรายชื่อ"}];
-  wheel = new Winwheel({
-    canvasId:'wheelcanvas',
-    numSegments: segs.length,
-    outerRadius: 180,
-    textFontSize: 18,
-    segments: segs,
-    animation: {
-      type: 'spinToStop',
-      duration: 6,
-      spins: 6,
-      callbackFinished: onSpinDone
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let i = 0; i < names.length; i++) {
+        const angle = startAngle + i * arc;
+        ctx.beginPath();
+        ctx.fillStyle = i % 2 ? "#60a5fa" : "#3b82f6";
+        ctx.moveTo(centerX, centerY);
+        ctx.arc(centerX, centerY, outsideRadius, angle, angle + arc, false);
+        ctx.fill();
+
+        ctx.save();
+        ctx.fillStyle = "white";
+        ctx.translate(centerX, centerY);
+        ctx.rotate(angle + arc / 2);
+        ctx.textAlign = "right";
+        ctx.font = "bold 22px Prompt";
+        ctx.fillText(names[i], textRadius, 10);
+        ctx.restore();
+      }
     }
-  });
-}
-function renderLists() {
-  namesEl.innerHTML = names.map(n=>`<div>${n}</div>`).join('');
-  countEl.textContent = names.length;
-  winnersEl.innerHTML = winners.map(w=>`<div>${w.name} — ${new Date(w.time).toLocaleTimeString()}</div>`).join('');
-}
-rebuildWheel();
-renderLists();
 
-/* ======== Spin control ======== */
-const spinBtn = document.getElementById('spinBtn');
-const sound = new Howl({ src:['https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg'] });
-function onSpinDone(segment) {
-  const winner = segment.text;
-  if (!names.includes(winner)) return;
-  sound.play();
-  confetti({particleCount:100,spread:70,origin:{y:0.4}});
-  Swal.fire({
-    title: 'ผู้โชคดีคือ',
-    html: `<h2 style="color:#0f172a">${winner}</h2>`,
-    confirmButtonText: 'ตกลง'
-  }).then(()=>{
-    winners.push({name:winner,time:Date.now()});
-    names = names.filter(n=>n!==winner);
-    saveNames(names);
-    saveWinners(winners);
-    rebuildWheel();
-    renderLists();
-  });
-}
-spinBtn.onclick = ()=>{
-  if(!names.length){
-    Swal.fire({icon:'info',text:'ยังไม่มีรายชื่อให้สุ่ม'});
-    return;
-  }
-  wheel.startAnimation();
-};
+    // ฟังก์ชันหมุนวงล้อ
+    function spin() {
+      if (spinning || names.length === 0) return;
+      spinning = true;
+      const spins = 10 + Math.random() * 10;
+      const endAngle = startAngle + spins * 2 * Math.PI;
+      const duration = 5000;
+      const startTime = performance.now();
 
-/* ======== Reset ======== */
-document.getElementById('resetBtn').onclick = ()=>{
-  Swal.fire({
-    title:'รีเซ็ตระบบ?',
-    text:'ลบรายชื่อทั้งหมดและผู้โชคดี',
-    icon:'warning',
-    showCancelButton:true,
-    confirmButtonText:'รีเซ็ต',
-    cancelButtonText:'ยกเลิก'
-  }).then(r=>{
-    if(r.isConfirmed){
-      localStorage.removeItem(NAMES_KEY);
-      localStorage.removeItem(WINNERS_KEY);
-      names=[]; winners=[];
-      rebuildWheel();
-      renderLists();
-      Swal.fire('รีเซ็ตแล้ว','','success');
+      const audio = new Audio("https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg");
+      audio.play();
+
+      function animate(time) {
+        const progress = Math.min((time - startTime) / duration, 1);
+        startAngle = endAngle * easeOut(progress);
+        drawWheel();
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          spinning = false;
+          const index = Math.floor(names.length - (startAngle / (2 * Math.PI)) % names.length) % names.length;
+          const winner = names[index];
+          winners.push(winner);
+          showWinner(winner);
+          names.splice(index, 1);
+          saveToGoogleSheet("winner", winner);
+        }
+      }
+      requestAnimationFrame(animate);
     }
-  });
-};
-</script>
+
+    function easeOut(t) {
+      return 1 - Math.pow(1 - t, 3);
+    }
+
+    function showWinner(winner) {
+      winnerPopup.style.display = "flex";
+      winnerNameEl.textContent = winner;
+
+      const cheer = new Audio("https://actions.google.com/sounds/v1/ambiences/crowd_cheer.ogg");
+      cheer.play();
+
+      setTimeout(() => {
+        winnerPopup.style.display = "none";
+        drawWheel();
+      }, 4000);
+    }
+
+    addNameBtn.onclick = () => {
+      const name = nameInput.value.trim();
+      if (name && !names.includes(name)) {
+        names.push(name);
+        saveToGoogleSheet("name", name);
+        nameInput.value = "";
+      }
+    };
+
+    spinButton.onclick = spin;
+
+    resetButton.onclick = () => {
+      localStorage.clear();
+      names = [];
+      winners = [];
+      drawWheel();
+      location.reload();
+    };
+
+    // นับถอยหลัง 3 นาที
+    let timeLeft = 180;
+    const countdown = setInterval(() => {
+      timeLeft--;
+      const min = Math.floor(timeLeft / 60);
+      const sec = timeLeft % 60;
+      timerEl.textContent = `เหลือเวลา: ${min}:${sec.toString().padStart(2, "0")} นาที`;
+      if (timeLeft <= 0) {
+        clearInterval(countdown);
+        popup.style.display = "none";
+        drawWheel();
+      }
+    }, 1000);
+
+    function saveToGoogleSheet(action, name) {
+      fetch(scriptURL, {
+        method: "POST",
+        body: new URLSearchParams({ action, name }),
+      }).catch(err => console.error(err));
+    }
+
+    resizeCanvas();
+  </script>
 </body>
 </html>
