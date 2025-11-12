@@ -38,47 +38,19 @@
       cursor: pointer;
       transition: 0.3s;
     }
-    button:hover {
-      background: #16a34a;
-      transform: scale(1.05);
-    }
-    #popup, #winnerPopup {
+    button:hover { background: #16a34a; transform: scale(1.05); }
+    #winnerPopup {
       position: fixed;
       top: 0; left: 0;
       width: 100%; height: 100%;
-      background: rgba(0, 0, 0, 0.8);
-      display: flex;
+      background: rgba(0,0,0,0.8);
+      display: none;
       align-items: center;
       justify-content: center;
-      z-index: 1000;
-    }
-    .popup-content {
-      background: #1e293b;
-      padding: 30px;
-      border-radius: 16px;
-      text-align: center;
-      color: white;
-      width: 400px;
-    }
-    input {
-      width: 80%;
-      padding: 10px;
-      margin: 10px 0;
-      border: none;
-      border-radius: 8px;
-      text-align: center;
-      font-size: 1rem;
-    }
-    #winnerPopup {
-      font-size: 2rem;
-      color: #fff;
       flex-direction: column;
+      z-index: 999;
     }
-    #winnerPopup h2 {
-      color: #facc15;
-      font-size: 2.5rem;
-      margin-bottom: 20px;
-    }
+    #winnerPopup h2 { color: #facc15; font-size: 2.5rem; }
   </style>
 </head>
 <body>
@@ -86,45 +58,40 @@
 
   <div id="controls">
     <button id="spinButton">เริ่มหมุน</button>
-    <button id="resetButton">รีเซ็ตระบบ</button>
+    <button id="resetButton">รีเซ็ต</button>
   </div>
 
-  <div id="popup">
-    <div class="popup-content">
-      <h2>กรอกชื่อผู้เข้าร่วม</h2>
-      <input type="text" id="nameInput" placeholder="ใส่ชื่อที่นี่">
-      <br>
-      <button id="addName">เพิ่มชื่อ</button>
-      <p id="timer">เหลือเวลา: 3:00 นาที</p>
-    </div>
-  </div>
-
-  <div id="winnerPopup" style="display:none;">
+  <div id="winnerPopup">
     <h2>🎉 ผู้โชคดีคือ 🎉</h2>
     <p id="winnerName"></p>
   </div>
 
   <script>
     const scriptURL = "https://script.google.com/macros/s/AKfycbwnOwUGXJHANHxX8qbNWaDPeUxHTAz2M3JHED-fyaJps9vStSBJB7VzCnn-4KO_ascJVw/exec";
+    const sheetJSON = scriptURL + "?action=get";
 
     const canvas = document.getElementById("wheelCanvas");
     const ctx = canvas.getContext("2d");
-    const popup = document.getElementById("popup");
-    const nameInput = document.getElementById("nameInput");
-    const addNameBtn = document.getElementById("addName");
     const spinButton = document.getElementById("spinButton");
     const resetButton = document.getElementById("resetButton");
     const winnerPopup = document.getElementById("winnerPopup");
     const winnerNameEl = document.getElementById("winnerName");
-    const timerEl = document.getElementById("timer");
 
     let names = [];
-    let winners = [];
-    let spinning = false;
     let startAngle = 0;
-    let spinTimeout = null;
+    let spinning = false;
 
-    // จัดขนาด canvas ให้พอดีกับจอ
+    async function loadNames() {
+      const res = await fetch(sheetJSON);
+      const data = await res.json();
+      names = data.names || [];
+      drawWheel();
+    }
+
+    // ดึงรายชื่อทุก 10 วินาที
+    setInterval(loadNames, 10000);
+    loadNames();
+
     function resizeCanvas() {
       canvas.width = window.innerWidth * 0.8;
       canvas.height = (canvas.width * 9) / 16;
@@ -133,12 +100,20 @@
     window.addEventListener("resize", resizeCanvas);
 
     function drawWheel() {
+      if (names.length === 0) {
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        ctx.fillStyle = "#94a3b8";
+        ctx.font = "bold 30px Prompt";
+        ctx.textAlign = "center";
+        ctx.fillText("รอรายชื่อจากผู้ร่วมลุ้น...", canvas.width/2, canvas.height/2);
+        return;
+      }
+
       const outsideRadius = canvas.height / 2 - 10;
       const textRadius = outsideRadius - 40;
-      const insideRadius = 0;
+      const arc = (2 * Math.PI) / names.length;
       const centerX = canvas.width / 2;
       const centerY = canvas.height / 2;
-      const arc = (2 * Math.PI) / names.length;
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       for (let i = 0; i < names.length; i++) {
@@ -160,7 +135,8 @@
       }
     }
 
-    // ฟังก์ชันหมุนวงล้อ
+    function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
+
     function spin() {
       if (spinning || names.length === 0) return;
       spinning = true;
@@ -176,78 +152,29 @@
         const progress = Math.min((time - startTime) / duration, 1);
         startAngle = endAngle * easeOut(progress);
         drawWheel();
-        if (progress < 1) {
-          requestAnimationFrame(animate);
-        } else {
+        if (progress < 1) requestAnimationFrame(animate);
+        else {
           spinning = false;
           const index = Math.floor(names.length - (startAngle / (2 * Math.PI)) % names.length) % names.length;
           const winner = names[index];
-          winners.push(winner);
           showWinner(winner);
           names.splice(index, 1);
-          saveToGoogleSheet("winner", winner);
+          fetch(scriptURL, { method: "POST", body: new URLSearchParams({ action: "winner", name: winner }) });
         }
       }
       requestAnimationFrame(animate);
     }
 
-    function easeOut(t) {
-      return 1 - Math.pow(1 - t, 3);
-    }
-
     function showWinner(winner) {
       winnerPopup.style.display = "flex";
       winnerNameEl.textContent = winner;
-
       const cheer = new Audio("https://actions.google.com/sounds/v1/ambiences/crowd_cheer.ogg");
       cheer.play();
-
-      setTimeout(() => {
-        winnerPopup.style.display = "none";
-        drawWheel();
-      }, 4000);
+      setTimeout(() => { winnerPopup.style.display = "none"; drawWheel(); }, 4000);
     }
-
-    addNameBtn.onclick = () => {
-      const name = nameInput.value.trim();
-      if (name && !names.includes(name)) {
-        names.push(name);
-        saveToGoogleSheet("name", name);
-        nameInput.value = "";
-      }
-    };
 
     spinButton.onclick = spin;
-
-    resetButton.onclick = () => {
-      localStorage.clear();
-      names = [];
-      winners = [];
-      drawWheel();
-      location.reload();
-    };
-
-    // นับถอยหลัง 3 นาที
-    let timeLeft = 180;
-    const countdown = setInterval(() => {
-      timeLeft--;
-      const min = Math.floor(timeLeft / 60);
-      const sec = timeLeft % 60;
-      timerEl.textContent = `เหลือเวลา: ${min}:${sec.toString().padStart(2, "0")} นาที`;
-      if (timeLeft <= 0) {
-        clearInterval(countdown);
-        popup.style.display = "none";
-        drawWheel();
-      }
-    }, 1000);
-
-    function saveToGoogleSheet(action, name) {
-      fetch(scriptURL, {
-        method: "POST",
-        body: new URLSearchParams({ action, name }),
-      }).catch(err => console.error(err));
-    }
-
+    resetButton.onclick = () => location.reload();
     resizeCanvas();
   </script>
 </body>
