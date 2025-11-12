@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wheel of Fortune Online</title>
+<style>
+  body { font-family: Arial; text-align: center; background:#f0f8ff; padding:10px; margin:0; }
+  h1 { font-size: 2em; margin: 10px 0; }
+  #wheelContainer { margin:20px auto; width:90vw; max-width:400px; height:90vw; max-height:400px; position:relative; }
+  #wheel { width:100%; height:100%; transform-origin:50% 50%; }
+  
+  form { margin:15px 0; display:flex; justify-content:center; gap:10px; flex-wrap:wrap; }
+  input[type=text] { padding:10px; font-size:16px; border-radius:5px; border:1px solid #ccc; flex:1 0 200px; }
+  button { padding:10px 20px; font-size:16px; border:none; border-radius:5px; background:#4CAF50; color:white; cursor:pointer; transition:0.3s; }
+  button:hover { background:#45a049; }
+
+  #winnerList { margin-top:20px; font-size:16px; text-align:left; max-width:400px; margin-left:auto; margin-right:auto; }
+
+  /* Popup */
+  #popup {
+    display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%);
+    background:#fff; padding:30px 50px; border-radius:20px; box-shadow:0 0 20px rgba(0,0,0,0.3);
+    z-index:999; font-size:24px; font-weight:bold; text-align:center;
+  }
+  #popup.show { display:block; animation:pop 0.5s ease-out; }
+  @keyframes pop { 0% { transform:translate(-50%, -50%) scale(0.3); opacity:0; } 100% { transform:translate(-50%, -50%) scale(1); opacity:1; } }
+</style>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+  import { getDatabase, ref, push, onValue, remove } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-database.js";
+  import JSConfetti from 'https://cdn.jsdelivr.net/npm/js-confetti@0.11.0/dist/js-confetti.browser.js';
+
+  // Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyDGYuI3yxJbUTc6T_0pm6WiEKZul11tXS0",
+    authDomain: "suchartwork-1487382986748.firebaseapp.com",
+    databaseURL: "https://suchartwork-1487382986748.firebaseio.com",
+    projectId: "suchartwork-1487382986748",
+    storageBucket: "suchartwork-1487382986748.firebasestorage.app",
+    messagingSenderId: "353884592527",
+    appId: "1:353884592527:web:59730eceafe78fadeb13fa"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const jsConfetti = new JSConfetti();
+
+  const wheelContainer = document.getElementById('wheelContainer');
+  const winnerList = document.getElementById('winners');
+  const popup = document.getElementById('popup');
+  const winSound = new Audio("https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3");
+
+  let names = [];
+  let winners = [];
+  let spinning = false;
+  let rotation = 0;
+
+  function addName(name){
+    if(name && name.trim()!=="") push(ref(db,'participants'), name.trim());
+  }
+
+  // Form submit
+  const nameForm = document.getElementById('nameForm');
+  nameForm.addEventListener('submit', e=>{
+    e.preventDefault();
+    const input = document.getElementById('nameInput');
+    addName(input.value);
+    input.value='';
+  });
+
+  const participantsRef = ref(db,'participants');
+  onValue(participantsRef, snapshot => { names = []; snapshot.forEach(child=>names.push(child.val())); drawWheel(); });
+
+  const winnersRef = ref(db,'winners');
+  onValue(winnersRef, snapshot => { winners = []; snapshot.forEach(child=>winners.push(child.val())); updateWinnerList(); });
+
+  function drawWheel(){
+    wheelContainer.innerHTML='';
+    const canvas = document.createElement('canvas');
+    canvas.id='wheel'; canvas.width=400; canvas.height=400;
+    wheelContainer.appendChild(canvas);
+    const ctx = canvas.getContext('2d'); ctx.clearRect(0,0,400,400);
+
+    if(names.length===0){
+      ctx.fillStyle="#ccc"; ctx.beginPath(); ctx.arc(200,200,200,0,2*Math.PI); ctx.fill();
+      ctx.fillStyle="#000"; ctx.font="bold 20px Arial"; ctx.textAlign="center"; ctx.fillText("ไม่มีชื่อผู้เข้าร่วม",200,200); return;
+    }
+
+    const sliceAngle = 2*Math.PI/names.length;
+    for(let i=0;i<names.length;i++){
+      ctx.fillStyle=i%2===0?"#FFDD00":"#FF8800";
+      ctx.beginPath(); ctx.moveTo(200,200); ctx.arc(200,200,200,i*sliceAngle,(i+1)*sliceAngle); ctx.closePath(); ctx.fill();
+      ctx.save(); ctx.translate(200,200); ctx.rotate(i*sliceAngle+sliceAngle/2); ctx.textAlign="right"; ctx.fillStyle="#000"; ctx.font="bold 16px Arial"; ctx.fillText(names[i],190,0); ctx.restore();
+    }
+  }
+
+  function updateWinnerList(){
+    winnerList.innerHTML='';
+    winners.forEach(n=>{
+      const li=document.createElement('li'); li.textContent=n; winnerList.appendChild(li);
+    });
+  }
+
+  function showPopup(winner){
+    popup.textContent=`🎉 ผู้โชคดีคือ: ${winner} 🎉`;
+    popup.classList.add('show');
+    winSound.play();
+    jsConfetti.addConfetti({emojis:['🎉','🏆','🎊'], confettiNumber:200});
+    setTimeout(()=>{ popup.classList.remove('show'); },3000);
+  }
+
+  function spinWheel(){
+    if(spinning || names.length===0) return;
+    spinning=true;
+    const randomDegree=Math.floor(Math.random()*360)+720;
+    rotation+=randomDegree;
+    const wheel=document.getElementById('wheel');
+    wheel.style.transition="transform 4s cubic-bezier(0.33,1,0.68,1)";
+    wheel.style.transform=`rotate(${rotation}deg)`;
+
+    setTimeout(()=>{
+      const sliceAngle=360/names.length;
+      const selectedIndex=Math.floor((360-(rotation%360))/sliceAngle)%names.length;
+      const winner=names[selectedIndex];
+      showPopup(winner);
+
+      onValue(ref(db,'participants'), snapshot=>{
+        snapshot.forEach(child=>{
+          if(child.val()===winner) remove(ref(db,'participants/'+child.key));
+        });
+      }, {once:true});
+
+      push(ref(db,'winners'), winner);
+      spinning=false;
+      drawWheel();
+    },4000);
+  }
+
+  function resetAll(){
+    if(confirm("คุณต้องการรีเซ็ตระบบทั้งหมดใช่หรือไม่?")){
+      remove(ref(db,'participants')); remove(ref(db,'winners')); rotation=0;
+    }
+  }
+
+</script>
+</head>
+<body>
+<h1>🎡 วงล้อสุ่มผู้โชคดีออนไลน์ 🎡</h1>
+
+<form id="nameForm">
+  <input type="text" id="nameInput" placeholder="กรอกชื่อของคุณ" required>
+  <button type="submit">เพิ่มชื่อ</button>
+  <button type="button" id="spinBtn">หมุนวงล้อ</button>
+  <button type="button" id="resetBtn">Reset</button>
+</form>
+
+<div id="wheelContainer"></div>
+
+<div id="winnerList">
+<h3>รายชื่อผู้โชคดีที่ถูกเลือก:</h3>
+<ul id="winners"></ul>
+</div>
+
+<div id="popup"></div>
+</body>
+</html>
