@@ -25,6 +25,7 @@
   import { getDatabase, ref, onValue, remove, push } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-database.js";
   import JSConfetti from 'https://cdn.jsdelivr.net/npm/js-confetti@0.11.0/dist/js-confetti.browser.js';
 
+  // Firebase config
   const firebaseConfig = {
     apiKey: "AIzaSyDGYuI3yxJbUTc6T_0pm6WiEKZul11tXS0",
     authDomain: "suchartwork-1487382986748.firebaseapp.com",
@@ -51,32 +52,73 @@
   let spinning=false;
   let rotation=0;
 
+  // โหลดรายชื่อผู้เข้าร่วมแบบ realtime
   const participantsRef = ref(db,'participants');
-  onValue(participantsRef, snapshot => { names=[]; snapshot.forEach(child=>names.push(child.val())); drawWheel(); });
+  onValue(participantsRef, snapshot => {
+    names=[];
+    snapshot.forEach(child => names.push(child.val()));
+    drawWheel(); // วาดวงล้อหลังโหลดชื่อเสร็จ
+  });
 
+  // โหลดรายชื่อผู้โชคดีแบบ realtime
   const winnersRef = ref(db,'winners');
-  onValue(winnersRef, snapshot => { winners=[]; snapshot.forEach(child=>winners.push(child.val())); updateWinnerList(); });
+  onValue(winnersRef, snapshot => {
+    winners=[];
+    snapshot.forEach(child=>winners.push(child.val()));
+    updateWinnerList();
+  });
 
   function drawWheel(){
     wheelContainer.innerHTML='';
-    const canvas=document.createElement('canvas');
-    canvas.id='wheel'; canvas.width=400; canvas.height=400; wheelContainer.appendChild(canvas);
-    const ctx=canvas.getContext('2d'); ctx.clearRect(0,0,400,400);
+    const canvas = document.createElement('canvas');
+    const size = Math.min(wheelContainer.clientWidth, wheelContainer.clientHeight);
+    canvas.width = size;
+    canvas.height = size;
+    wheelContainer.appendChild(canvas);
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0,0,size,size);
 
     if(names.length===0){
-      ctx.fillStyle="#ccc"; ctx.beginPath(); ctx.arc(200,200,200,0,2*Math.PI); ctx.fill();
-      ctx.fillStyle="#000"; ctx.font="bold 20px Arial"; ctx.textAlign="center"; ctx.fillText("ไม่มีชื่อผู้เข้าร่วม",200,200); return;
+      ctx.fillStyle="#ccc"; 
+      ctx.beginPath(); 
+      ctx.arc(size/2,size/2,size/2,0,2*Math.PI); 
+      ctx.fill();
+      ctx.fillStyle="#000"; 
+      ctx.font=`bold ${Math.floor(size/15)}px Arial`; 
+      ctx.textAlign="center"; 
+      ctx.fillText("ไม่มีชื่อผู้เข้าร่วม", size/2, size/2); 
+      return;
     }
 
-    const sliceAngle=2*Math.PI/names.length;
+    const sliceAngle = 2*Math.PI/names.length;
     for(let i=0;i<names.length;i++){
-      ctx.fillStyle=i%2===0?"#FFDD00":"#FF8800";
-      ctx.beginPath(); ctx.moveTo(200,200); ctx.arc(200,200,200,i*sliceAngle,(i+1)*sliceAngle); ctx.closePath(); ctx.fill();
-      ctx.save(); ctx.translate(200,200); ctx.rotate(i*sliceAngle+sliceAngle/2); ctx.textAlign="right"; ctx.fillStyle="#000"; ctx.font="bold 16px Arial"; ctx.fillText(names[i],190,0); ctx.restore();
+      ctx.fillStyle = i%2===0 ? "#FFDD00" : "#FF8800";
+      ctx.beginPath();
+      ctx.moveTo(size/2,size/2);
+      ctx.arc(size/2,size/2,size/2,i*sliceAngle,(i+1)*sliceAngle);
+      ctx.closePath();
+      ctx.fill();
+
+      // วางชื่อ
+      ctx.save();
+      ctx.translate(size/2,size/2);
+      ctx.rotate(i*sliceAngle + sliceAngle/2);
+      ctx.textAlign = "right";
+      ctx.fillStyle="#000";
+      ctx.font=`bold ${Math.floor(size/20)}px Arial`;
+      ctx.fillText(names[i], size*0.45, 0);
+      ctx.restore();
     }
   }
 
-  function updateWinnerList(){ winnerList.innerHTML=''; winners.forEach(n=>{ const li=document.createElement('li'); li.textContent=n; winnerList.appendChild(li); }); }
+  function updateWinnerList(){
+    winnerList.innerHTML='';
+    winners.forEach(n=>{
+      const li = document.createElement('li');
+      li.textContent = n;
+      winnerList.appendChild(li);
+    });
+  }
 
   function showPopup(winner){
     popup.textContent=`🎉 ผู้โชคดีคือ: ${winner} 🎉`;
@@ -88,32 +130,42 @@
 
   function spinWheel(){
     if(spinning || names.length===0) return;
-    spinning=true;
-    const randomDegree=Math.floor(Math.random()*360)+720;
-    rotation+=randomDegree;
-    const wheel=document.getElementById('wheel');
-    wheel.style.transition="transform 4s cubic-bezier(0.33,1,0.68,1)";
-    wheel.style.transform=`rotate(${rotation}deg)`;
+    spinning = true;
+    const randomDegree = Math.floor(Math.random()*360)+720; // หมุนอย่างน้อย 2 รอบ
+    rotation += randomDegree;
+    const wheel = document.getElementById('wheel');
+    wheel.style.transition = "transform 4s cubic-bezier(0.33,1,0.68,1)";
+    wheel.style.transform = `rotate(${rotation}deg)`;
 
     setTimeout(()=>{
-      const sliceAngle=360/names.length;
-      const selectedIndex=Math.floor((360-(rotation%360))/sliceAngle)%names.length;
-      const winner=names[selectedIndex];
+      const sliceAngle = 360/names.length;
+      const selectedIndex = Math.floor((360-(rotation%360))/sliceAngle)%names.length;
+      const winner = names[selectedIndex];
+
       showPopup(winner);
 
-      onValue(ref(db,'participants'), snapshot=>{
+      // ลบผู้โชคดีออกจาก participants
+      onValue(participantsRef, snapshot=>{
         snapshot.forEach(child=>{
           if(child.val()===winner) remove(ref(db,'participants/'+child.key));
         });
       }, {once:true});
 
+      // เพิ่มผู้โชคดีไป winners
       push(ref(db,'winners'), winner);
-      spinning=false;
+
+      spinning = false;
       drawWheel();
     },4000);
   }
 
-  function resetAll(){ if(confirm("คุณต้องการรีเซ็ตระบบทั้งหมดใช่หรือไม่?")){ remove(ref(db,'participants')); remove(ref(db,'winners')); rotation=0; } }
+  function resetAll(){
+    if(confirm("คุณต้องการรีเซ็ตระบบทั้งหมดใช่หรือไม่?")){
+      remove(ref(db,'participants'));
+      remove(ref(db,'winners'));
+      rotation=0;
+    }
+  }
 
   spinBtn.addEventListener('click',spinWheel);
   resetBtn.addEventListener('click',resetAll);
