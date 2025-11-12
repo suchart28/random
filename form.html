@@ -2,36 +2,53 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<title>ร่วมลุ้นรางวัล</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>เพิ่มชื่อผู้เข้าร่วม</title>
 <style>
-body { display:flex;flex-direction:column;justify-content:center;align-items:center;height:100vh;margin:0;background:linear-gradient(135deg,#2563eb,#1e3a8a);color:#fff;font-family:Prompt,sans-serif;text-align:center;}
-input {width:80%;max-width:300px;padding:12px;margin:10px 0;border-radius:10px;border:none;text-align:center;font-size:1rem;}
-button {background:#22c55e;color:white;border:none;padding:12px 30px;border-radius:12px;font-size:1.1rem;cursor:pointer;}
-button:hover {background:#16a34a;}
+  body { font-family: Arial; text-align:center; background:#f0f8ff; padding:20px; }
+  h1 { margin-bottom:20px; }
+  form { display:flex; flex-direction:column; align-items:center; gap:10px; }
+  input[type=text] { padding:10px; font-size:16px; width:200px; border-radius:5px; border:1px solid #ccc; }
+  button { padding:10px 20px; font-size:16px; border:none; border-radius:5px; background:#4CAF50; color:white; cursor:pointer; transition:0.3s; }
+  button:hover { background:#45a049; }
+  a { margin-top:20px; display:inline-block; text-decoration:none; color:#fff; background:#2196F3; padding:10px 20px; border-radius:5px; }
+  a:hover { background:#0b7dda; }
 </style>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+  import { getDatabase, push, ref } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDGYuI3yxJbUTc6T_0pm6WiEKZul11tXS0",
+    authDomain: "suchartwork-1487382986748.firebaseapp.com",
+    databaseURL: "https://suchartwork-1487382986748.firebaseio.com",
+    projectId: "suchartwork-1487382986748",
+    storageBucket: "suchartwork-1487382986748.firebasestorage.app",
+    messagingSenderId: "353884592527",
+    appId: "1:353884592527:web:59730eceafe78fadeb13fa"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  const form = document.getElementById('nameForm');
+  form.addEventListener('submit', e=>{
+    e.preventDefault();
+    const name = document.getElementById('nameInput').value.trim();
+    if(name!==""){
+      push(ref(db,'participants'), name);
+      document.getElementById('nameInput').value='';
+      alert(`เพิ่มชื่อ "${name}" เรียบร้อยแล้ว`);
+    }
+  });
+</script>
 </head>
 <body>
-<h1>🎉 ร่วมลุ้นรางวัล 🎉</h1>
-<p>กรอกชื่อของคุณเพื่อลุ้นรางวัล</p>
-<input type="text" id="nameInput" placeholder="ใส่ชื่อของคุณ">
-<br>
-<button id="sendBtn">ส่งชื่อ</button>
-
-<script>
-const scriptURL = "https://script.google.com/macros/s/AKfycbxXEQATVHDyf6UMbxxZ4QhKNxE8enYrhOaZpUHrNBObG3YCpb1vZXCNkfkSj4pmW9QQQQ/exec";
-
-document.getElementById("sendBtn").onclick = async () => {
-  const name = document.getElementById("nameInput").value.trim();
-  if(!name) return alert("กรุณากรอกชื่อก่อนส่ง!");
-  try{
-    await fetch(scriptURL,{
-      method:"POST",
-      body:new URLSearchParams({action:"name",name})
-    });
-    alert("ส่งชื่อสำเร็จ ✅");
-    document.getElementById("nameInput").value="";
-  }catch(err){console.error(err);alert("ส่งชื่อไม่สำเร็จ");}
-};
-</script>
+<h1>เพิ่มชื่อผู้เข้าร่วม</h1>
+<form id="nameForm">
+  <input type="text" id="nameInput" placeholder="กรอกชื่อของคุณ" required>
+  <button type="submit">เพิ่มชื่อ</button>
+</form>
+<a href="wheel.html">ไปยังหน้าหมุนวงล้อ</a>
 </body>
 </html>
